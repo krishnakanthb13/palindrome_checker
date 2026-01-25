@@ -1,0 +1,20 @@
+{
+  "palindromes": [
+    "12321",
+    "123321",
+    "Civic",
+    "Level",
+    "Madam",
+    "Noon",
+    "Racecar"
+  ],
+  "levidromes": [
+    "on <=> no",
+    "Step <=> pets",
+    "Was <=> saw"
+  ],
+  "timing": {
+    "palindrome": "0.10",
+    "levidrome": "0.20"
+  }
+}
