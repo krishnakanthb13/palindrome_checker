@@ -13,8 +13,9 @@ def is_valid_time(s):
 
 def generate_dates():
     # Define the start and end dates for the 20th and 21st centuries
-    start_date = datetime.date(1900, 1, 1)
-    end_date = datetime.date(2099, 12, 31)
+    # 1989-12-13 to 2089-12-13 - Century Dates
+    start_date = datetime.date(1989, 12, 13)
+    end_date = datetime.date(2089, 12, 13)
     
     # Target directory and file
     # This script is in century_dates/, so we go up one level to find data/
