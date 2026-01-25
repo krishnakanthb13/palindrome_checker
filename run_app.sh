@@ -1,29 +1,23 @@
 #!/bin/bash
 
-# --- Pre-flight Checks ---
+# --- Config ---
+SERVER_PORT=8088
+CLIENT_PORT=8089
 
-# 1. Check for Node.js
-if ! command -v node &> /dev/null
-then
-    echo "[ERROR] Node.js is not installed."
-    echo "Please install Node.js from https://nodejs.org/"
-    exit 1
-fi
+echo "=========================================="
+echo "  Starting Palindrome Checker"
+echo "  Server: http://localhost:$SERVER_PORT"
+echo "  Client: http://localhost:$CLIENT_PORT"
+echo "=========================================="
 
-# 2. Check for dependencies (Unified Workspace node_modules)
+# Graceful shutdown of subprocesses
+trap 'kill 0' SIGINT SIGTERM EXIT
+
+# Install dependencies if needed
 if [ ! -d "node_modules" ]; then
-    echo "[INFO] node_modules not found. Installing workspace dependencies..."
+    echo "[INFO] node_modules not found. Installing..."
     npm install
 fi
 
-# --- Graceful Shutdown ---
-trap "kill 0" EXIT
-
-# --- Launch App ---
-echo "=========================================="
-echo "  Starting Palindrome Checker (Workspace)"
-echo "  Server: Port 8088"
-echo "  Client: Port 5173"
-echo "=========================================="
-
-npm run dev -s
+# Run processes
+npm run dev

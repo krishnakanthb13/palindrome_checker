@@ -9,7 +9,7 @@
   "scripts": {
     "server": "npm run dev --workspace=server",
     "client": "npm run dev --workspace=client",
-    "dev": "npx concurrently --raw \"npm run server --silent\" \"npm run client --silent\""
+    "dev": "npx concurrently --kill-others --raw \"npm run server --silent\" \"npm run client --silent\""
   },
   "devDependencies": {
     "browserslist": "^4.28.1",

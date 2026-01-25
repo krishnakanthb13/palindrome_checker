@@ -1,29 +1,52 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { findPalindromes } from './utils/palindrome';
+import { findLevidromes } from './utils/levidrome';
 import './App.css';
 
 function App() {
     const [files, setFiles] = useState([]);
     const [selectedFile, setSelectedFile] = useState(null);
     const [fileContent, setFileContent] = useState('');
+    const [levContent, setLevContent] = useState('');
+    const [viewMode, setViewMode] = useState('palindrome'); // 'palindrome' | 'levidrome'
+    const [executionTime, setExecutionTime] = useState({});
     const [logContent, setLogContent] = useState('');
-    const [executionTime, setExecutionTime] = useState(null);
     const [loading, setLoading] = useState(false);
+
+    const [serverStatus, setServerStatus] = useState('checking'); // 'ok', 'outdated'
 
     // Load files on mount
     useEffect(() => {
+        // Check Server Version
+        fetch('/api/health')
+            .then(res => {
+                if (res.ok) return res.json();
+                throw new Error("Old Server");
+            })
+            .then(data => {
+                if (data.version === '2.0-json-logs') setServerStatus('ok');
+                else setServerStatus('outdated');
+            })
+            .catch(() => setServerStatus('outdated'));
+
         fetch('/api/files')
             .then(res => res.json())
             .then(data => setFiles(data.files || []))
             .catch(err => console.error("Failed to load files:", err));
     }, []);
 
+    const activeFileRef = useRef(null);
+
     const handleFileSelect = async (filename) => {
+        if (activeFileRef.current === filename && !loading) return; // Prevent double click re-load on same file
+
+        activeFileRef.current = filename;
         setSelectedFile(filename);
         setLoading(true);
-        setExecutionTime(null);
+        setExecutionTime({});
         setFileContent('');
         setLogContent('');
+        setLevContent('');
 
         try {
             // 1. Get File Content
@@ -32,51 +55,123 @@ function App() {
             const content = fileData.content || '';
             setFileContent(content);
 
-            // 2. Check for existing Log
-            const logCheckRes = await fetch(`/api/log?source=${filename}`);
-            const logCheckData = await logCheckRes.json();
+            // 2. Check for existing Logs
+            const [palLogRes, levLogRes] = await Promise.all([
+                fetch(`/api/log?source=${filename}`),
+                fetch(`/api/log?source=${filename}&type=levidrome`)
+            ]);
 
-            if (logCheckData.exists && logCheckData.content) {
-                setLogContent(logCheckData.content);
-                setExecutionTime('Cached');
+            const palLogData = await palLogRes.json();
+            const levLogData = await levLogRes.json();
+
+            let newExecutionTime = {};
+
+            if (palLogData.exists && palLogData.content) {
+                setLogContent(palLogData.content);
+                newExecutionTime.palindrome = palLogData.timing
+                    ? `Cached: ${palLogData.timing}ms`
+                    : 'Cached';
             } else {
-                // If no log exists, process automatically the first time
-                await processPalindromes(filename, content);
+                // Will be processed below if not cached
+            }
+
+            if (levLogData.exists && levLogData.content) {
+                setLevContent(levLogData.content);
+                newExecutionTime.levidrome = levLogData.timing
+                    ? `Cached: ${levLogData.timing}ms`
+                    : 'Cached';
+            }
+
+            setExecutionTime(newExecutionTime);
+
+            if (activeFileRef.current !== filename) return;
+
+            // Trigger processing if any log is missing
+            // We pass the explicit 'filename' to ensure consistency
+            if (!palLogData.exists || !levLogData.exists) {
+                await processAnalysis(filename, content, !palLogData.exists, !levLogData.exists);
             }
 
         } catch (err) {
             console.error("Error loading file:", err);
         } finally {
-            setLoading(false);
+            if (activeFileRef.current === filename) {
+                setLoading(false);
+            }
         }
     };
 
-    const processPalindromes = async (filename, content) => {
-        const startTime = performance.now();
-        const palindromes = findPalindromes(content);
-        const endTime = performance.now();
-        const duration = (endTime - startTime).toFixed(2);
+    // Helper to allow UI to render (show spinner)
+    const yieldToMain = () => new Promise(resolve => setTimeout(resolve, 50));
 
-        const logBody = palindromes.join('\n');
+    const processAnalysis = async (filename, content, doPalindrome = true, doLevidrome = true) => {
+        // Wait for spinner to appear
+        await yieldToMain();
 
-        // Save to Log
-        await fetch('/api/log', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ source: filename, content: logBody })
-        });
+        if (activeFileRef.current !== filename) return;
 
-        setLogContent(logBody);
-        setExecutionTime(duration);
+        let times = { ...executionTime };
+
+        if (doPalindrome) {
+            const start = performance.now();
+            const palindromes = findPalindromes(content);
+            const duration = (performance.now() - start).toFixed(2);
+
+            // Re-check race condition
+            if (activeFileRef.current !== filename) return;
+
+            const body = palindromes.join('\n');
+            setLogContent(body);
+
+            times.palindrome = duration;
+            // Update time immediately so user sees progress
+            setExecutionTime(prev => {
+                const newTimes = { ...prev, palindrome: duration };
+                times = newTimes; // Sync local var for next step (though redundant if we use functional updates below too)
+                return newTimes;
+            });
+
+            // Save in bg
+            fetch('/api/log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source: filename, content: body, timing: duration })
+            }).catch(console.error);
+
+            // Yield again between heavy tasks
+            await yieldToMain();
+        }
+
+        if (doLevidrome) {
+            if (activeFileRef.current !== filename) return;
+
+            const start = performance.now();
+            const levidromes = findLevidromes(content);
+            const duration = (performance.now() - start).toFixed(2);
+
+            if (activeFileRef.current !== filename) return;
+
+            const body = levidromes.join('\n');
+            setLevContent(body);
+
+            setExecutionTime(prev => ({ ...prev, levidrome: duration }));
+
+            fetch('/api/log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source: filename, content: body, type: 'levidrome', timing: duration })
+            }).catch(console.error);
+        }
     };
 
     const handleRefresh = async () => {
         if (!selectedFile || !fileContent) return;
         setLoading(true);
         try {
-            await processPalindromes(selectedFile, fileContent);
+            // Refresh BOTH palindromes and levidromes
+            await processAnalysis(selectedFile, fileContent, true, true);
         } catch (err) {
-            console.error("Error refreshing palindromes:", err);
+            console.error("Error refreshing analysis:", err);
         } finally {
             setLoading(false);
         }
@@ -124,9 +219,10 @@ function App() {
         }
     };
 
-    const logWords = useMemo(() => {
-        return logContent.split('\n').filter(Boolean);
-    }, [logContent]);
+    const currentList = useMemo(() => {
+        const content = viewMode === 'palindrome' ? logContent : levContent;
+        return content.split('\n').filter(Boolean);
+    }, [logContent, levContent, viewMode]);
 
     const processorRef = useRef(null);
     const mirrorRef = useRef(null);
@@ -196,7 +292,13 @@ function App() {
                                 <h3>Processor</h3>
                                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                                     <span className="badge">Source: {selectedFile}</span>
-                                    {executionTime && <span className="badge" style={{ borderColor: 'var(--accent-color)' }}>{executionTime === 'Cached' ? 'Cached' : `${executionTime}ms`}</span>}
+                                    {executionTime[viewMode] && (
+                                        <span className="badge" style={{ borderColor: 'var(--accent-color)' }}>
+                                            {executionTime[viewMode].toString().startsWith('Cached')
+                                                ? executionTime[viewMode]
+                                                : `${executionTime[viewMode]}ms`}
+                                        </span>
+                                    )}
                                 </div>
                             </header>
                             <div className="dual-scrollbar-layout">
@@ -220,23 +322,43 @@ function App() {
                         {/* Viewer View: Log / Palindromes */}
                         <section className="panel viewer-panel">
                             <header>
-                                <h3>Viewer (Logs)</h3>
+                                <h3>Viewer</h3>
+                                <div className="tabs">
+                                    <button
+                                        className={`tab-btn ${viewMode === 'palindrome' ? 'active' : ''}`}
+                                        onClick={() => setViewMode('palindrome')}
+                                    >
+                                        Palindromes
+                                    </button>
+                                    <button
+                                        className={`tab-btn ${viewMode === 'levidrome' ? 'active' : ''}`}
+                                        onClick={() => setViewMode('levidrome')}
+                                    >
+                                        Levidromes
+                                    </button>
+                                </div>
                                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                    <button className="refresh-btn" onClick={handleRefresh} title="Recalculate Palindromes">
+                                    <button className="refresh-btn" onClick={handleRefresh} title={`Recalculate ${viewMode}s`}>
                                         🔄 Refresh
                                     </button>
-                                    <span className="badge">Found: {logWords.length}</span>
+                                    <span className="badge">Found: {currentList.length}</span>
                                 </div>
                             </header>
                             <div className="horizontal-scroll-view">
                                 <div className="columns-container">
-                                    {logWords.map((word, idx) => (
+                                    {currentList.map((item, idx) => (
                                         <div key={idx} className="palindrome-item">
-                                            <span>{word}</span>
+                                            <span>{item}</span>
+                                            {/* For Levidromes (A <=> B), maybe just search A? Or both? */}
+                                            {/* Simple logic: if arrow exists, split and show search for first part or both */}
                                             <button
                                                 className="nav-btn"
-                                                onClick={() => scrollToWord(word)}
-                                                title={`Find "${word}" in source`}
+                                                onClick={() => {
+                                                    // Handle "STOP <=> POTS" -> Search "STOP"
+                                                    const wordToSearch = item.includes('<=>') ? item.split('<=>')[0].trim() : item;
+                                                    scrollToWord(wordToSearch);
+                                                }}
+                                                title={`Find "${item.split('<=>')[0].trim()}" in source`}
                                             >
                                                 🎯
                                             </button>
@@ -250,6 +372,8 @@ function App() {
             </main>
 
             {loading && <div className="loading-overlay"><div className="spinner"></div></div>}
+
+
         </div>
     );
 }

@@ -14,6 +14,11 @@ app.use(express.json());
 // Root directory to serve files from (Data folder)
 const ROOT_DIR = path.resolve(__dirname, '../data');
 
+// Health Check / Version Endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', version: '2.0-json-logs' });
+});
+
 // Ensure data directory exists
 if (!fs.existsSync(ROOT_DIR)) {
     fs.mkdirSync(ROOT_DIR);
@@ -74,20 +79,39 @@ app.get('/api/file', (req, res) => {
     }
 });
 
-// GET /api/log - Read existing log file
+// GET /api/log - Read existing log file (combined JSON format)
 app.get('/api/log', (req, res) => {
     try {
         const sourceFile = req.query.source;
         if (!sourceFile) return res.status(400).json({ error: "No source provided" });
 
-        const logFilename = `${sourceFile}.log`;
+        const type = req.query.type || 'palindrome'; // default to palindrome
+        const baseName = path.parse(sourceFile).name;
+        const logFilename = `${baseName}.log`;
         const logPath = safePath(logFilename);
+
+        console.log(`[GET LOG] File: "${logFilename}", Type: "${type}"`);
 
         if (fs.existsSync(logPath)) {
             const buffer = fs.readFileSync(logPath);
             const { encoding } = jschardet.detect(buffer);
-            const content = iconv.decode(buffer, encoding || 'utf-8');
-            res.json({ content, exists: true });
+            const rawContent = iconv.decode(buffer, encoding || 'utf-8');
+
+            try {
+                const data = JSON.parse(rawContent);
+                const content = (type === 'levidrome')
+                    ? (data.levidromes || []).join('\n')
+                    : (data.palindromes || []).join('\n');
+
+                // Get timing for this type
+                const timing = data.timing || {};
+                const cachedTime = (type === 'levidrome') ? timing.levidrome : timing.palindrome;
+
+                res.json({ content, exists: content.length > 0, timing: cachedTime });
+            } catch (parseErr) {
+                console.log('[GET LOG] Could not parse JSON, treating as empty');
+                res.json({ content: "", exists: false });
+            }
         } else {
             res.json({ content: "", exists: false });
         }
@@ -96,25 +120,47 @@ app.get('/api/log', (req, res) => {
     }
 });
 
-// POST /api/log - Write/Append to log
+// POST /api/log - Write to combined log file (JSON format)
 app.post('/api/log', (req, res) => {
     try {
-        const { source, content, overwrite } = req.body;
+        const { source, content, timing } = req.body;
         if (!source) return res.status(400).json({ error: "No source provided" });
 
-        const logFilename = `${source}.log`;
+        const type = req.query.type || req.body.type || 'palindrome';
+        const baseName = path.parse(source).name;
+        const logFilename = `${baseName}.log`;
         const logPath = safePath(logFilename);
 
-        // If overwrite is true, replace file. If false/undefined, append?
-        // Requirements say "create or use the existing log file". 
-        // We probably want to overwrite the log with the NEW findings or Append?
-        // Usually, a "checker" refreshes the log. Let's Overwrite for this session's findings,
-        // or we can implement an append logic.
-        // For simplicity: Overwrite with current findings is cleaner for a "Checker" tool.
-        // But user said "Create a Log file... Using the same framework... keep separate from working files".
-        // Let's stick to simple write.
+        console.log(`[POST LOG] File: "${logFilename}", Type: "${type}", Timing: ${timing}ms`);
 
-        fs.writeFileSync(logPath, content, 'utf-8');
+        // Read existing data if file exists
+        let data = { palindromes: [], levidromes: [], timing: {} };
+        if (fs.existsSync(logPath)) {
+            try {
+                const buffer = fs.readFileSync(logPath);
+                const { encoding } = jschardet.detect(buffer);
+                const rawContent = iconv.decode(buffer, encoding || 'utf-8');
+                data = JSON.parse(rawContent);
+                if (!data.timing) data.timing = {};
+            } catch (parseErr) {
+                console.log('[POST LOG] Could not parse existing, starting fresh');
+            }
+        }
+
+        // Update the appropriate section
+        const items = content ? content.split('\n').filter(Boolean) : [];
+        if (type === 'levidrome') {
+            data.levidromes = items;
+            if (timing) data.timing.levidrome = timing;
+        } else {
+            data.palindromes = items;
+            if (timing) data.timing.palindrome = timing;
+        }
+
+        // Write back as JSON
+        fs.writeFileSync(logPath, JSON.stringify(data, null, 2), 'utf-8');
+        console.log(`[POST LOG] Saved ${items.length} ${type}s to "${logFilename}"`);
+
         res.json({ success: true, path: logFilename });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -122,6 +168,10 @@ app.post('/api/log', (req, res) => {
 });
 
 app.listen(PORT, () => {
+    console.log(`\n========================================`);
+    console.log(`SERVER STARTED AT: ${new Date().toISOString()}`);
+    console.log(`LOG FORMAT: filename.log (NO .txt)`);
+    console.log(`========================================`);
     console.log(`Server running on http://localhost:${PORT}`);
     console.log(`Serving files from: ${ROOT_DIR}`);
 });
