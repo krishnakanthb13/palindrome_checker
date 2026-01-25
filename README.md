@@ -2,6 +2,8 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
+![App Screenshot](./assets/palindrome_checker.png)
+
 A high-performance, multilingual palindrome auditing suite designed for speed, precision, and real-time logging.
 
 ## Features
