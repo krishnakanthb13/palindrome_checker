@@ -28,5 +28,4 @@ echo ==========================================
 
 :: Run concurrently using the root orchestrator
 call npm run dev -s
-
-pause
+exit /b %ERRORLEVEL%

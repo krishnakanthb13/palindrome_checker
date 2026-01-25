@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const iconv = require('iconv-lite');
+const jschardet = require('jschardet');
 
 const app = express();
 const PORT = 8088;
@@ -33,7 +35,7 @@ app.get('/api/files', (req, res) => {
         const fileList = files
             .filter(file => {
                 const stat = fs.statSync(path.join(ROOT_DIR, file));
-                return stat.isFile() && !file.startsWith('.');
+                return stat.isFile() && !file.startsWith('.') && !file.endsWith('.log');
             })
             .map(file => {
                 const stat = fs.statSync(path.join(ROOT_DIR, file));
@@ -60,7 +62,12 @@ app.get('/api/file', (req, res) => {
         const filePath = safePath(filename);
         if (!fs.existsSync(filePath)) return res.status(404).json({ error: "File not found" });
 
-        const content = fs.readFileSync(filePath, 'utf-8');
+        // Read file as Buffer to detect encoding
+        const buffer = fs.readFileSync(filePath);
+        const { encoding } = jschardet.detect(buffer);
+
+        // Decode based on detected encoding, fallback to utf-8
+        const content = iconv.decode(buffer, encoding || 'utf-8');
         res.json({ content });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -77,7 +84,9 @@ app.get('/api/log', (req, res) => {
         const logPath = safePath(logFilename);
 
         if (fs.existsSync(logPath)) {
-            const content = fs.readFileSync(logPath, 'utf-8');
+            const buffer = fs.readFileSync(logPath);
+            const { encoding } = jschardet.detect(buffer);
+            const content = iconv.decode(buffer, encoding || 'utf-8');
             res.json({ content, exists: true });
         } else {
             res.json({ content: "", exists: false });

@@ -1,9 +1,18 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
 /* Layout */
 .app-container {
     display: flex;
     height: 100vh;
     width: 100vw;
     overflow: hidden;
+    padding: 1rem;
+    background-color: #0b0f1a;
+    gap: 1rem;
 }
 
 /* Sidebar */
@@ -12,7 +21,8 @@
     min-width: 200px;
     max-width: 500px;
     background-color: var(--bg-secondary);
-    border-right: 1px solid var(--border-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
     resize: horizontal;
@@ -65,7 +75,11 @@
     display: flex;
     flex-direction: column;
     background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
     position: relative;
+    /* Removed padding to let scrollbars sit at edges */
+    overflow: hidden;
 }
 
 .empty-state {
@@ -100,6 +114,7 @@
 
 .panel header {
     padding: 0.75rem 1.5rem;
+    /* Added padding back here */
     background-color: rgba(15, 23, 42, 0.8);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border-color);
@@ -112,7 +127,26 @@
     font-size: 0.9rem;
     text-transform: uppercase;
     color: var(--text-secondary);
-    letter-spacing: 0.05em;
+}
+
+.refresh-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.refresh-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--accent-color);
+    border-color: var(--accent-color);
 }
 
 .badge {
@@ -125,14 +159,53 @@
 }
 
 /* Processor Content */
+.processor-panel .content-area {
+    position: relative;
+    /* Base for highlighters */
+}
+
+.processor-panel .content-area {
+    direction: ltr;
+}
+
+.dual-scrollbar-layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.scrollbar-mirror {
+    width: 16px;
+    /* Slightly wider to be more obvious */
+    overflow-y: scroll;
+    direction: rtl;
+    /* Puts scrollbar on left */
+    flex-shrink: 0;
+    border-right: 1px solid var(--border-color);
+    background-color: rgba(0, 0, 0, 0.1);
+    /* Subtle track background */
+}
+
+.scrollbar-mirror::-webkit-scrollbar {
+    width: 10px;
+}
+
+.scrollbar-mirror::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 10px;
+}
+
 .content-area {
     flex: 1;
-    overflow: auto;
+    overflow-y: scroll;
+    /* Force vertical scrollbar show */
+    overflow-x: auto;
     padding: 1.5rem;
     font-family: 'Fira Code', monospace;
     font-size: 0.9rem;
     line-height: 1.6;
     color: var(--text-secondary);
+    /* Native smooth scrolling */
 }
 
 /* Viewer (Horizontal Scroll) */
@@ -156,23 +229,47 @@
     display: flex;
     flex-direction: column;
     flex-wrap: wrap;
-    /* Wraps items into new columns */
     height: 100%;
-    /* Force full height to trigger wrap */
     align-content: flex-start;
-    /* Start columns from left */
     gap: 0 2rem;
-    /* Row gap / Column gap */
     min-width: min-content;
 }
 
 .palindrome-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
     color: var(--accent-color);
     font-family: 'Fira Code', monospace;
     font-size: 0.9rem;
     line-height: 1.6;
-    padding: 0 0.5rem;
+    padding: 0.2rem 0.5rem;
     border-radius: 4px;
+    white-space: nowrap;
+    transition: background-color 0.2s ease;
+}
+
+.nav-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 2px;
+    border-radius: 4px;
+    opacity: 0.8;
+    /* Keep it fairly visible */
+    transition: all 0.2s ease;
+    line-height: 1;
+}
+
+.palindrome-item:hover .nav-btn {
+    opacity: 1;
+}
+
+.nav-btn:hover {
+    transform: scale(1.2);
+    background: rgba(255, 255, 255, 0.1) !important;
 }
 
 .palindrome-item:hover {
