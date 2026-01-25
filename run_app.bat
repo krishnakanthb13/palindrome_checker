@@ -56,4 +56,7 @@ echo.
 :: Run concurrently using the root orchestrator
 :: --kill-others ensures if one dies (or you ctrl+c), they both die.
 call npm run dev -s
+
+:: Ensure cleanup by running stop_app.bat
+call stop_app.bat
 exit /b %ERRORLEVEL%
