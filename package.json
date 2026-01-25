@@ -1,0 +1,23 @@
+{
+  "name": "palindrome_checker_orchestrator",
+  "version": "1.0.0",
+  "description": "Palindrome Checker App",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "server": "npm run dev --workspace=server",
+    "client": "npm run dev --workspace=client",
+    "dev": "npx concurrently --raw \"npm run server --silent\" \"npm run client --silent\""
+  },
+  "devDependencies": {
+    "browserslist": "^4.28.1",
+    "caniuse-lite": "^1.0.30001766",
+    "concurrently": "^8.0.0"
+  },
+  "overrides": {
+    "browserslist": "^4.28.1",
+    "caniuse-lite": "^1.0.30001766"
+  }
+}
