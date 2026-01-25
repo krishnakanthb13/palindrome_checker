@@ -9,6 +9,7 @@ function App() {
     const [fileContent, setFileContent] = useState('');
     const [levContent, setLevContent] = useState('');
     const [viewMode, setViewMode] = useState('palindrome'); // 'palindrome' | 'levidrome'
+    const [levidromeToggleMap, setLevidromeToggleMap] = useState({});
     const [executionTime, setExecutionTime] = useState({});
     const [logContent, setLogContent] = useState('');
     const [loading, setLoading] = useState(false);
@@ -349,16 +350,30 @@ function App() {
                                     {currentList.map((item, idx) => (
                                         <div key={idx} className="palindrome-item">
                                             <span>{item}</span>
-                                            {/* For Levidromes (A <=> B), maybe just search A? Or both? */}
-                                            {/* Simple logic: if arrow exists, split and show search for first part or both */}
                                             <button
                                                 className="nav-btn"
                                                 onClick={() => {
-                                                    // Handle "STOP <=> POTS" -> Search "STOP"
-                                                    const wordToSearch = item.includes('<=>') ? item.split('<=>')[0].trim() : item;
-                                                    scrollToWord(wordToSearch);
+                                                    if (viewMode === 'levidrome' && item.includes('<=>')) {
+                                                        const parts = item.split('<=>').map(s => s.trim());
+                                                        const currentToggle = levidromeToggleMap[item] || 0;
+                                                        
+                                                        const wordToSearch = parts[currentToggle];
+                                                        scrollToWord(wordToSearch);
+                                                        
+                                                        setLevidromeToggleMap(prev => ({
+                                                            ...prev,
+                                                            [item]: currentToggle === 0 ? 1 : 0
+                                                        }));
+                                                    } else {
+                                                        const wordToSearch = item.includes('<=>') ? item.split('<=>')[0].trim() : item;
+                                                        scrollToWord(wordToSearch);
+                                                    }
                                                 }}
-                                                title={`Find "${item.split('<=>')[0].trim()}" in source`}
+                                                title={
+                                                    viewMode === 'levidrome' && item.includes('<=>')
+                                                        ? `Find "${(item.split('<=>')[(levidromeToggleMap[item] || 0)]).trim()}" in source`
+                                                        : `Find "${item.split('<=>')[0].trim()}" in source`
+                                                }
                                             >
                                                 🎯
                                             </button>
