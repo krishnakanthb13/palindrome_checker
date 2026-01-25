@@ -12,6 +12,8 @@ This tool provides a **high-efficiency, zero-overhead auditing environment**. It
 3. **Surgical Precision**: The "Exact Match" navigation doesn't just scroll to a line; it uses the Browser Range API to find the exact pixel coordinates and visual selection of a token.
 4. **Synthetic Dataset Generation**: Beyond auditing existing files, the suite includes tools to generate high-entropy synthetic datasets (like century-scale dates) to discover temporal patterns and palindromic alignments.
 5. **Contextual Integrity**: Symbols are treated as delimiters or parts of words based on strict proximity rules, catering to technical data as much as natural language.
+6. **The "Responsive Engine"**: Heavy linguistic analysis is segmented via micro-tasks (yielding to the main thread) to ensure the UI remains responsive and provides visual feedback (spinners) even during full CPU utilization.
+7. **Atomic Persistence**: Results are stored in unified JSON schemas to ensure that Palindromes and Levidromes stay contextually linked and retain their original performance metrics.
 
 ## Target Audience
 - **Linguists**: For pattern detection in literal datasets.
