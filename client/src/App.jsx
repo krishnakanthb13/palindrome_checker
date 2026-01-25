@@ -184,8 +184,9 @@ function App() {
             <main className="main-content">
                 {!selectedFile ? (
                     <div className="empty-state">
+                        <div style={{ fontSize: '5rem', marginBottom: '1rem' }}>🤖</div>
                         <h1>Palindrome Checker</h1>
-                        <p>Select a file to begin auditing.</p>
+                        <p>Select a file from the explorer to start auditing for linguistic symmetry.</p>
                     </div>
                 ) : (
                     <div className="split-view">

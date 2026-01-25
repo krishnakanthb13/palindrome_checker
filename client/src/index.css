@@ -1,11 +1,12 @@
 :root {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
+  --bg-primary: #020617;
+  --bg-secondary: #0f172a;
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --accent-color: #38bdf8;
   --accent-glow: rgba(56, 189, 248, 0.4);
-  --border-color: #334155;
+  --accent-secondary: #818cf8;
+  --border-color: rgba(255, 255, 255, 0.1);
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
@@ -14,7 +15,8 @@ body {
   font-family: var(--font-sans);
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  overflow: hidden; /* App-like feel */
+  overflow: hidden;
+  /* App-like feel */
   height: 100vh;
 }
 
@@ -36,7 +38,9 @@ body {
   background: var(--accent-color);
 }
 
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   margin: 0;
   font-weight: 600;
   letter-spacing: -0.025em;

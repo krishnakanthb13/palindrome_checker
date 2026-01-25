@@ -10,23 +10,41 @@
     height: 100vh;
     width: 100vw;
     overflow: hidden;
-    padding: 1rem;
-    background-color: #0b0f1a;
-    gap: 1rem;
+    padding: 1.25rem;
+    background: radial-gradient(circle at 0% 0%, #1e293b 0%, #0f172a 50%, #020617 100%);
+    background-size: 200% 200%;
+    animation: backgroundMove 15s ease infinite;
+    gap: 1.25rem;
+}
+
+@keyframes backgroundMove {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
 }
 
 /* Sidebar */
 .sidebar {
-    width: 260px;
-    min-width: 200px;
+    width: 280px;
+    min-width: 240px;
     max-width: 500px;
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
     display: flex;
     flex-direction: column;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
     resize: horizontal;
-    overflow: auto;
+    overflow: hidden;
 }
 
 .sidebar-header {
@@ -48,25 +66,27 @@
 }
 
 .file-list li {
-    padding: 0.25rem 1.0rem;
+    padding: 0.4rem 1.25rem;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
     color: var(--text-secondary);
     font-size: 0.9rem;
+    border-left: 3px solid transparent;
 }
 
 .file-list li:hover {
     background-color: rgba(255, 255, 255, 0.05);
     color: var(--text-primary);
+    padding-left: 1.5rem;
 }
 
 .file-list li.active {
     background-color: rgba(56, 189, 248, 0.1);
     color: var(--accent-color);
-    border-right: 3px solid var(--accent-color);
+    border-left: 3px solid var(--accent-color);
 }
 
 /* Main Content */
@@ -74,11 +94,12 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    background-color: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
     position: relative;
-    /* Removed padding to let scrollbars sit at edges */
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
     overflow: hidden;
 }
 
@@ -89,6 +110,23 @@
     justify-content: center;
     height: 100%;
     color: var(--text-secondary);
+    text-align: center;
+    padding: 2rem;
+}
+
+.empty-state h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #38bdf8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.empty-state p {
+    font-size: 1.1rem;
+    max-width: 400px;
+    line-height: 1.6;
 }
 
 .split-view {
@@ -113,11 +151,10 @@
 }
 
 .panel header {
-    padding: 0.75rem 1.5rem;
-    /* Added padding back here */
-    background-color: rgba(15, 23, 42, 0.8);
+    padding: 1rem 1.5rem;
+    background: linear-gradient(to right, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));
     backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -284,21 +321,33 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(15, 23, 42, 0.7);
+    background: rgba(15, 23, 42, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(2px);
+    backdrop-filter: blur(12px);
     z-index: 50;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 .spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid rgba(255, 255, 255, 0.1);
+    width: 48px;
+    height: 48px;
+    border: 4px solid rgba(56, 189, 248, 0.1);
     border-radius: 50%;
     border-top-color: var(--accent-color);
-    animation: spin 1s ease-in-out infinite;
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+    animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 @keyframes spin {
