@@ -10,7 +10,8 @@ This tool provides a **high-efficiency, zero-overhead auditing environment**. It
 1. **Performance First**: Using raw pointer comparisons and avoiding string mutations ensures that even a 16MB dictionary is processed in milliseconds.
 2. **Minimal DOM Footprint**: By using `<pre>` tags for raw source and virtualized layouts for logs, the UI retains stability even when handling 100,000+ line files.
 3. **Surgical Precision**: The "Exact Match" navigation doesn't just scroll to a line; it uses the Browser Range API to find the exact pixel coordinates and visual selection of a token.
-4. **Contextual Integrity**: Symbols are treated as delimiters or parts of words based on strict proximity rules, catering to technical data as much as natural language.
+4. **Synthetic Dataset Generation**: Beyond auditing existing files, the suite includes tools to generate high-entropy synthetic datasets (like century-scale dates) to discover temporal patterns and palindromic alignments.
+5. **Contextual Integrity**: Symbols are treated as delimiters or parts of words based on strict proximity rules, catering to technical data as much as natural language.
 
 ## Target Audience
 - **Linguists**: For pattern detection in literal datasets.

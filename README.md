@@ -11,6 +11,7 @@ A high-performance, multilingual palindrome auditing suite designed for speed, p
 - **🌐 Multilingual**: Supports Unicode characters for any language or number system.
 - **🧭 Exact-Word Navigation**: Surgical precision jump to any palindrome in your source file using the [Range API](https://developer.mozilla.org/en-US/docs/Web/API/Range).
 - **💾 Auto-Caching**: Scans are persistence-cached to the `/data` folder for instant re-loads.
+- **📅 Date Generator**: Dedicated tool to generate century-scale date permutations with palindrome logic.
 - **🌓 Sleek Dark UI**: Modern glassmorphic interface built for focused auditing.
 
 ## Quick Start
@@ -29,6 +30,16 @@ A high-performance, multilingual palindrome auditing suite designed for speed, p
    ```bash
    sh run_app.sh
    ```
+
+## Utility Tools
+### 📅 Century Date Generator
+Generates three formats of dates for the 20th and 21st centuries, specifically optimized for palindrome auditing (including unique timestamp palindromes).
+- **Location**: `century_dates/generate_dates.py`
+- **Output**: `data/century_dates.txt`
+- **Run**:
+  ```bash
+  python century_dates/generate_dates.py
+  ```
 
 ## Documentation
 - [Code walkthrough](./CODE_DOCUMENTATION.md)
