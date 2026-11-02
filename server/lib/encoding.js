@@ -81,6 +81,28 @@ function decodeStrict(buffer, encoding, label) {
     }
 }
 
+// Windows-1252 maps 0x80-0x9F to punctuation/symbols. Decoding by hand keeps
+// the result identical on every platform and Node version; TextDecoder's table
+// has varied between runtimes in practice.
+const WINDOWS_1252_HIGH = [
+    '\u20AC', '\u0081', '\u201A', '\u0192', '\u201E', '\u2026', '\u2020', '\u2021',
+    '\u02C6', '\u2030', '\u0160', '\u2039', '\u0152', '\u008D', '\u017D', '\u008F',
+    '\u0090', '\u2018', '\u2019', '\u201C', '\u201D', '\u2022', '\u2013', '\u2014',
+    '\u02DC', '\u2122', '\u0161', '\u203A', '\u0153', '\u009D', '\u017E', '\u0178',
+];
+
+function decodeWindows1252(buffer) {
+    let text = '';
+    for (let index = 0; index < buffer.length; index++) {
+        const byte = buffer[index];
+        text +=
+            byte >= 0x80 && byte <= 0x9F
+                ? WINDOWS_1252_HIGH[byte - 0x80]
+                : String.fromCharCode(byte);
+    }
+    return text;
+}
+
 /**
  * Decode a source file.
  *
@@ -97,6 +119,13 @@ export function decodeBuffer(buffer, requestedEncoding) {
                 text: decodeStrict(buffer, encoding, encoding),
                 encoding,
                 bom: hasUtf16Bom(buffer),
+            };
+        }
+        if (encoding === 'windows-1252') {
+            return {
+                text: decodeWindows1252(buffer),
+                encoding,
+                bom: false,
             };
         }
         return {
@@ -138,7 +167,7 @@ export function decodeBuffer(buffer, requestedEncoding) {
         };
     } catch {
         return {
-            text: new TextDecoder('windows-1252').decode(buffer),
+            text: decodeWindows1252(buffer),
             encoding: 'windows-1252',
             bom: false,
         };
