@@ -1,67 +1,115 @@
+import argparse
 import datetime
 import os
 
-def is_valid_time(s):
-    """Checks if a 6-digit string matches a valid HH:MM:SS format."""
+DEFAULT_START = datetime.date(1989, 12, 13)
+DEFAULT_END = datetime.date(2089, 12, 13)
+
+
+def is_valid_time(value):
+    """Return True when a 6-digit string is a valid HH:MM:SS time."""
     try:
-        hh = int(s[0:2])
-        mm = int(s[2:4])
-        ss = int(s[4:6])
-        return 0 <= hh < 24 and 0 <= mm < 60 and 0 <= ss < 60
+        hours = int(value[0:2])
+        minutes = int(value[2:4])
+        seconds = int(value[4:6])
+        return 0 <= hours < 24 and 0 <= minutes < 60 and 0 <= seconds < 60
     except (ValueError, IndexError):
         return False
 
-def generate_dates():
-    # Define the start and end dates for the 20th and 21st centuries
-    # 1989-12-13 to 2089-12-13 - Century Dates
-    start_date = datetime.date(1989, 12, 13)
-    end_date = datetime.date(2089, 12, 13)
-    
-    # Target directory and file
-    # This script is in century_dates/, so we go up one level to find data/
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    data_dir = os.path.join(base_dir, 'data')
-    output_path = os.path.join(data_dir, 'century_dates.txt')
-    
-    # Ensure data directory exists (user said it is already present, but good practice)
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
-    
-    print(f"Generating dates from {start_date} to {end_date}...")
-    print(f"Saving to: {output_path}")
-    
-    current_date = start_date
-    count = 0
-    with open(output_path, 'w') as f:
-        while current_date <= end_date:
-            # 1. YYMMDD (Unconditional as per initial request)
-            yymmdd = current_date.strftime('%y%m%d')
-            # 2. YYYYMMDD (Unconditional as per initial request)
-            yyyymmdd = current_date.strftime('%Y%m%d')
-            
-            f.write(f"{yymmdd}\n")
-            f.write(f"{yyyymmdd}\n")
-            count += 2
 
-            # 3. Check for YYMMDDHHMMSS palindrome
-            # For YYMMDDHHMMSS to be a palindrome, HHMMSS must be reverse of YYMMDD
-            hhmmss_candidate_6 = yymmdd[::-1]
-            if is_valid_time(hhmmss_candidate_6):
-                f.write(f"{yymmdd}{hhmmss_candidate_6}\n")
-                count += 1
-            
-            # 4. Check for YYYYMMDDHHMMSS palindrome
-            # Length 14: Y1 Y2 Y3 Y4 M1 M2 D1 D2 | H1 H2 M1 M2 S1 S2
-            # Palindrome requires D1 == D2 and HHMMSS == reverse(YYYYMM[0:6])
-            if yyyymmdd[6] == yyyymmdd[7]:
-                hhmmss_candidate_8 = yyyymmdd[0:6][::-1]
-                if is_valid_time(hhmmss_candidate_8):
-                    f.write(f"{yyyymmdd}{hhmmss_candidate_8}\n")
-                    count += 1
-            
-            current_date += datetime.timedelta(days=1)
-            
-    print(f"Done! Created {count} date entries.")
+def generate_entries(start_date, end_date):
+    """Generate unique YYMMDD, YYYYMMDD, and timestamp-palindrome entries.
+
+    The range spans parts of the 20th and 21st centuries. Entries are
+    deduplicated because, for example, 1989 and 2089 share the two-digit year
+    ``89`` and therefore produce the same ``891213`` line.
+    """
+    if start_date > end_date:
+        raise ValueError("start_date must not be after end_date")
+
+    entries = []
+    seen = set()
+    current_date = start_date
+
+    def add(value):
+        if value not in seen:
+            seen.add(value)
+            entries.append(value)
+
+    while current_date <= end_date:
+        yymmdd = current_date.strftime("%y%m%d")
+        yyyymmdd = current_date.strftime("%Y%m%d")
+
+        add(yymmdd)
+        add(yyyymmdd)
+
+        # YYMMDDHHMMSS is a palindrome when HHMMSS is the reverse of YYMMDD.
+        hhmmss_candidate = yymmdd[::-1]
+        if is_valid_time(hhmmss_candidate):
+            add(f"{yymmdd}{hhmmss_candidate}")
+
+        # YYYYMMDDHHMMSS is a palindrome when the day digits match and HHMMSS
+        # is the reverse of YYYYMM.
+        if yyyymmdd[6] == yyyymmdd[7]:
+            hhmmss_candidate = yyyymmdd[0:6][::-1]
+            if is_valid_time(hhmmss_candidate):
+                add(f"{yyyymmdd}{hhmmss_candidate}")
+
+        current_date += datetime.timedelta(days=1)
+
+    return entries
+
+
+def write_entries(entries, output_path):
+    directory = os.path.dirname(os.path.abspath(output_path))
+    os.makedirs(directory, exist_ok=True)
+
+    with open(output_path, "w", encoding="utf-8", newline="\n") as handle:
+        for entry in entries:
+            handle.write(f"{entry}\n")
+
+
+def parse_date(value):
+    try:
+        return datetime.date.fromisoformat(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(f"invalid date: {value}") from error
+
+
+def main(argv=None):
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    default_output = os.path.join(base_dir, "data", "century_dates.txt")
+
+    parser = argparse.ArgumentParser(
+        description="Generate palindrome-friendly date strings."
+    )
+    parser.add_argument(
+        "--start",
+        type=parse_date,
+        default=DEFAULT_START,
+        help=f"first date, inclusive (default: {DEFAULT_START.isoformat()})",
+    )
+    parser.add_argument(
+        "--end",
+        type=parse_date,
+        default=DEFAULT_END,
+        help=f"last date, inclusive (default: {DEFAULT_END.isoformat()})",
+    )
+    parser.add_argument(
+        "--output",
+        default=default_output,
+        help=f"output file (default: {default_output})",
+    )
+    args = parser.parse_args(argv)
+
+    if args.start > args.end:
+        parser.error("--start must not be after --end")
+
+    print(f"Generating dates from {args.start} to {args.end}...")
+    entries = generate_entries(args.start, args.end)
+    write_entries(entries, args.output)
+    print(f"Wrote {len(entries)} unique entries to: {args.output}")
+
 
 if __name__ == "__main__":
-    generate_dates()
+    main()

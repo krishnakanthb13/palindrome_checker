@@ -28,4 +28,14 @@ Thumbs.db
 *.swo
 
 # App specific
-# *.log
+# Old per-source caches (superseded by data/.cache/)
+data/*.log
+data/.cache/
+
+# Launcher state
+.run/
+*.pid
+
+# Python
+__pycache__/
+*.pyc

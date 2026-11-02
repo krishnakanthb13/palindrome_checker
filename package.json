@@ -1,25 +1,28 @@
 {
   "name": "palindrome_checker_orchestrator",
-  "version": "1.0.0",
+  "version": "3.0.0",
+  "private": true,
   "description": "Palindrome Checker App",
+  "license": "GPL-3.0-only",
   "workspaces": [
     "client",
     "server"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "server": "npm run dev --workspace=server",
-    "client": "npm run dev --workspace=client",
-    "dev": "npx concurrently --kill-others --raw \"npm run server --silent\" \"npm run client --silent\""
+    "dev": "concurrently --kill-others --raw \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm run dev --workspace=server --silent",
+    "dev:client": "npm run dev --workspace=client --silent",
+    "build": "npm run build --workspace=client",
+    "start": "node server/index.js",
+    "preview": "npm run preview --workspace=client",
+    "test": "node --test tests/analysis.test.mjs tests/api.test.mjs tests/encoding.test.mjs tests/search.test.mjs tests/server.test.mjs",
+    "lint": "npm run lint --workspace=client",
+    "clean": "node scripts/clean-caches.mjs"
   },
   "devDependencies": {
-    "browserslist": "^4.28.1",
-    "caniuse-lite": "^1.0.30001766",
-    "concurrently": "^8.0.0",
-    "iconv-lite": "^0.7.2",
-    "jschardet": "^3.1.4"
-  },
-  "overrides": {
-    "browserslist": "^4.28.1",
-    "caniuse-lite": "^1.0.30001766"
+    "concurrently": "^8.0.0"
   }
 }
