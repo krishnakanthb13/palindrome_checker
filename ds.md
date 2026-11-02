@@ -3,7 +3,9 @@
 **Date:** 2026-11-02
 **Scope:** client, server, launcher scripts, dataset generator, configs, docs, and the shipped datasets.
 **Method:** static review plus live API tests and direct execution of the analysis functions against the bundled data.
-**Files changed during the audit:** none (this document only).
+**Files changed during the audit:** none (this document only; remediation followed separately).
+
+> **Status: remediated.** This document records the revision before the fixes. The critical, high, and medium findings below were remediated on the `audit-fixes` branch; low-priority items and partial or deliberately deferred suggestions are listed in [Remediation status](#remediation-status). File paths and line numbers refer to the audited revision.
 
 ---
 
@@ -22,6 +24,43 @@ However, the current build has several confirmed defects:
 - **Unicode bugs** for astral-plane letters and combining marks.
 
 The sections below list each finding with evidence, impact, and a concrete fix.
+
+## Remediation status
+
+All critical, high, and medium findings below were addressed. Current verification: **57 Node tests**, **4 Python tests**, ESLint, production build, and a live production smoke test on the real 16 MB OPTED dictionary.
+
+| Finding | Current implementation |
+| :--- | :--- |
+| Path traversal bypass | `server/lib/paths.js` uses `path.relative` boundary checks plus `realpath` for existing paths, rejects the root, dot-segments, NUL bytes, and sibling-prefix escapes. Traversal returns `403` with a JSON error. |
+| Open CORS, LAN binding, path leaks | CORS is removed, the server binds `127.0.0.1` by default, `x-powered-by` is disabled, and HTTP 500s are generic. `nosniff` and `no-referrer` headers are set. |
+| Encoding auto-detection corruption | `server/lib/encoding.js` uses BOM sniffing → strict UTF-8 → Windows-1252, with explicit overrides (Mac Roman, Windows-1250/1251, ISO-8859-2, UTF-16 LE/BE). Statistical guessing and `jschardet` are gone. Caches are always UTF-8 JSON. |
+| Cache invalidation; Refresh reuses old content | Caches live in `data/.cache` with source path, size, mtime, raw-byte SHA-256, encoding, `analysisVersion`, and `cacheVersion`. Freshness compares path, encoding, SHA-256, and analysis version. Refresh re-reads the source and forces recomputation. |
+| Empty-result cache loop | `exists` means “a valid cache entry exists”, independent of result count. Empty arrays round-trip and remain fresh (`tests/server.test.mjs`). |
+| Client request race | `client/src/App.jsx` uses a monotonic request token plus `AbortController`; file and result state are committed only after the token check. |
+| Silent fetch/POST failures; ignored 413 | `client/src/api.js` checks `res.ok`, throws `ApiError` with the server message, and the UI shows an error banner with Retry. POST bodies are capped at 64 kB because they contain only `{ source, encoding, force }`. Source files are capped at 64 MB. |
+| Astral/combining-mark Unicode bugs | `shared/analysis.mjs` compares graphemes, normalizes NFC when needed, and keeps fast paths for ASCII and ordinary accented words. Covered by `tests/analysis.test.mjs`. |
+| Punctuation, case duplicates, phrase gaps | Tokenization and punctuation policy are documented and tested: surrounding punctuation is stripped for comparison, internal punctuation stays significant, dedupe is case-insensitive with first-casing preserved, and results use `Intl.Collator`. Phrase mode is explicitly out of scope. |
+| Fragile `<=>`/`\|` result serialization | Results are structured: `findPalindromes → [{ word, count }]`, `findLevidromes → [{ a, b }]`. Pair dedupe uses a JSON key, and the UI never parses display strings. |
+| Non-atomic, unvalidated, client-trusted caches | The server computes results; `CacheStore` validates the schema, writes to a temp file, atomically renames, and serializes work with a per-source promise lock. A concurrency test verifies the final cache. |
+| Dependencies, launchers, lint, build | The server depends only on Express; `concurrently` is the root dev dependency. Launchers `cd` to the repo root and never kill by image name; `scripts/stop-app.ps1` targets owned listeners by port. ESLint flat config, `strictPort`, the preview proxy, Express static serving, env-driven ports, `engines`, and `.nvmrc` are in place. |
+| UI blocking; inaccurate performance docs | Analysis runs server-side; the UI shows progress and stays interactive. Results start with 500 rows and add 500 per click, and a `ResizeObserver` keeps the scroll mirror synchronized. Docs now state measured seconds, not milliseconds. |
+| Dead health-check UI | The health overlay is implemented and compares `/api/health`’s `version` with `shared/version.mjs`. Offline/outdated servers get a blocking retry overlay. |
+| Client UX gaps | Added file-list refresh, error banner/retry, encoding badge + override, cache/status badge, occurrence cycling with counters, stable result keys, and empty states. |
+| Accessibility and responsive issues | File rows are buttons; tabs use `role`/`aria-selected`; 🎯 buttons have `aria-label`; the loading overlay uses `role="status"`/`aria-live`; focus-visible and `prefers-reduced-motion` styles exist; layout uses `100dvh` and a small-screen breakpoint; Google Fonts were replaced with system fonts; the favicon is local. |
+| Server robustness | Recursive data-dir creation, per-entry stat handling in the listing, binary-extension filtering, `EADDRINUSE` handling, graceful shutdown, JSON 404s (except the production SPA fallback for extensionless GETs), centralized JSON error middleware, and `Cache-Control: no-store` on successful file and analysis responses. |
+| Python generator issues | `century_dates/generate_dates.py` has `--start`/`--end`/`--output`, UTF-8/LF output, deduplication, clearer names, and four unit tests. Regenerated output has **78,151 unique** entries. |
+| Documentation drift | `README.md`, `CODE_DOCUMENTATION.md`, `DESIGN_PHILOSOPHY.md`, and `CONTRIBUTING.md` now describe the shipped code, including tokenization, encoding, caching, tests, CI, and scripts. |
+| Repository hygiene | `data/*.log` and `data/.cache/` are ignored/untracked, Vite scaffold files are removed, the root and server packages declare GPL-3.0-only (the private client package omits a license field), `.editorconfig`/`.nvmrc` exist, CI is configured, and there are no global process kills. |
+| No tests | 57 Node tests and 4 Python tests cover analysis, Unicode, API helpers, encoding, navigation, security, cache behavior, concurrency, and the generator. |
+
+### Still open or deliberately deferred
+
+- Prettier is not configured; `.editorconfig` and the existing style are the guide.
+- Large dictionaries are still committed directly; Git LFS or a download script remains an option.
+- Full Unicode case folding is not implemented; `toLowerCase()` is used and the Greek final-sigma limitation is documented.
+- Analysis still runs on the server’s main thread; `worker_threads` is the recommended step for multi-user deployments.
+- Results load in 500-row batches rather than being truly virtualized.
+- `ukenglish.txt` and `usa2.txt` contain upstream-corrupted accented bytes (`0x83` for `é` and similar) that no standard encoding reconstructs. The app keeps deterministic decoding and exposes explicit overrides rather than guessing.
 
 ---
 
@@ -766,6 +805,8 @@ Add Vitest + React Testing Library for the client and supertest for the server. 
 8. **Polish:** structured result objects, occurrence cycling, virtualization, accessibility, docs accuracy, repo hygiene.
 
 Items 1–5 are the ones I would not ship without. Items 1, 2, 3, 4, and 6 are observable in the current app; items 7–8 are quality and maintainability work.
+
+> **Post-remediation note:** the core architecture changes are in place: shared algorithms, server-side compute, split server modules and cache store, structured results, the status/health UI, and removal of the unused TypeScript scaffold. `App.jsx` remains a single component rather than being split into separate components/hooks; analysis runs on the server main thread rather than in `worker_threads`; and results load in 500-row batches rather than using true virtualization. The appendix below is retained as evidence from the audited revision.
 
 ---
 
