@@ -11,7 +11,7 @@ This tool provides a **local, high-signal auditing environment**. It prioritizes
 ## Design Principles
 
 1. **Responsiveness over raw client speed**: Analysis runs in the Express process, not on the browser main thread. The 16 MB OPTED dictionary takes a few seconds to analyze, but the UI stays interactive and shows progress. Starting a new load aborts the previous request.
-2. **Progressive result rendering**: The source viewer uses a single `<pre>` text node for exact Range navigation. Result lists start with 500 rows and add 500 per “Show more” click instead of dumping every result into the DOM at once.
+2. **Progressive result rendering**: The source viewer uses a single `<pre>` text node for exact Range navigation. Result lists start with 500 rows and add 500 per “Show more” click instead of dumping every result into the DOM at once. A client-side filter narrows the loaded array instantly, so large result sets stay scannable without extra server work.
 3. **Surgical precision**: Navigation uses the Browser Range API to select the matching token and scroll it into view. It understands case and surrounding-punctuation variants, and repeated words can be cycled with a visible `current/total` counter.
 4. **Synthetic dataset generation**: The suite includes a CLI generator for century-scale date datasets and timestamp palindromes, with configurable `--start`, `--end`, and `--output`.
 5. **Explicit tokenization**: Whitespace/comma delimiters, punctuation trimming for comparison, case-insensitive deduplication, grapheme-aware comparison, and a minimum of two letters/numbers are documented and tested. Phrase palindromes are intentionally out of scope.
@@ -19,7 +19,8 @@ This tool provides a **local, high-signal auditing environment**. It prioritizes
 7. **Integrity by default**: Cache entries carry a source SHA-256, size, mtime, encoding, algorithm version, and cache version. Freshness is decided by source path, encoding, SHA-256, and version — not by mtime. Writes are atomic and serialized per source. Stale or corrupt caches are never presented as fresh.
 8. **Local by default**: The API binds to `127.0.0.1`, CORS is disabled, path traversal is rejected by directory-boundary and realpath checks, sources are capped by `MAX_FILE_BYTES`, and HTTP errors do not leak absolute paths. Successful file and analysis responses send `Cache-Control: no-store`, and all responses set `nosniff`/`no-referrer` headers.
 9. **Deterministic encoding**: Auto detection is BOM sniffing → strict UTF-8 → Windows-1252, never statistical guessing. The detected encoding is visible, and users can override it with Mac Roman, Windows-1250/1251, ISO-8859-2, or UTF-16 LE/BE.
-10. **Visible state**: The UI surfaces server health, cache state, detected encoding, execution time, occurrence counts, and retry actions instead of failing silently.
+10. **Visible state**: The UI surfaces server health, cache state, detected encoding, execution time, occurrence counts, and retry actions instead of failing silently. Status pills use semantic colors (cyan for work in progress, green for cached or recomputed, amber for stale or navigation warnings, red for errors), and the workspace header carries the file metadata so the explorer can stay compact.
+11. **Instrument-grade interface**: The UI is a calm, high-density console rather than a marketing page. Dark layered surfaces, one cyan accent, monospaced data, and inline SVG iconography keep attention on the content. File and result filters make large sets tractable, tabs expose live counts, and empty, loading, and error states are explicit. Keyboard access — a skip link, roving tabs with arrow keys, `/` to filter, `Esc` to clear, and visible focus rings — is part of the design, not an afterthought. No external fonts or icon CDNs are used.
 
 ## Target Audience
 
@@ -33,7 +34,9 @@ This tool provides a **local, high-signal auditing environment**. It prioritizes
 - **Single-process compute**: The server analyzes on its main thread. A local single-user workflow is unaffected, but a multi-user deployment should move analysis to `worker_threads`.
 - **Monospaced Content**: Optimized for monospaced text to ensure precise navigation offsets.
 - **Legacy data**: Bundled non-UTF-8 dictionaries are decoded with a Windows-1252 fallback rather than rewritten. The UI exposes the detected encoding and explicit overrides, including Mac Roman. Some bundled files contain upstream-corrupted accented bytes that no standard encoding can reconstruct.
-- **Incremental batches, not virtualization**: Result rows load 500 at a time on demand, and the source remains one text node. This keeps navigation and scrolling predictable without introducing a virtualized DOM.
+- **Incremental batches, not virtualization**: Result rows load 500 at a time on demand, and the source remains one text node. Client-side filters narrow the in-memory list; this keeps navigation and scrolling predictable without introducing a virtualized DOM.
+- **No external UI assets**: Icons are inline SVG, and typography uses the local system font stack, so the interface has no runtime CDN or font dependency.
+- **Client-side filtering only**: Filters operate on results that are already loaded. They do not trigger a new analysis, and they reset with the file selection where stale filtering would confuse.
 - **No phrase mode**: The audit operates on whitespace/comma-delimited tokens. Phrase palindromes and configurable delimiters are intentionally unsupported.
 - **Case folding**: `toLowerCase()` is used rather than full Unicode case folding; Greek final sigma is the notable limitation.
 - **Local files only**: Sources must already be in `DATA_DIR`; there is no upload or remote fetch.

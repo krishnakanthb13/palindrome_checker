@@ -16,7 +16,7 @@ A local, multilingual palindrome and levidrome auditing suite for large text fil
 - **🔤 Encoding control**: BOM sniffing, strict UTF-8, and Windows-1252 fallback, with overrides for Mac Roman, Windows-1250, ISO-8859-2, Windows-1251, UTF-16 LE, and UTF-16 BE. A detected-encoding badge and manual selector are available in the UI.
 - **📊 Health checks**: The client verifies the server protocol version and shows a clear overlay when the API is unavailable or outdated.
 - **📅 Date generator**: Generate palindrome-friendly date permutations with `century_dates/generate_dates.py`, including custom `--start`, `--end`, and `--output` options.
-- **🌓 Sleek dark UI**: Glassmorphic desktop layout with a responsive stacked layout, 500-row result batches, keyboard-accessible controls, and reduced-motion support.
+- **🖥️ Precision console UI**: Dark glassmorphic dashboard with semantic status colors, inline SVG iconography, file and result filters, keyboard-driven tabs, a skip link, and responsive layouts validated at desktop, tablet, and mobile widths.
 
 ## Quick Start
 
@@ -35,6 +35,15 @@ Or use a launcher:
 - **Unix/Linux**: `sh run_app.sh`, stop with `Ctrl+C`
 
 The launchers `cd` to the repository root, install root workspace dependencies if `node_modules` is missing, and run the foreground dev command. The Windows shutdown script only targets listeners on the configured ports and leaves processes it cannot attribute to this project running. Nothing runs a global `taskkill /im node.exe`.
+
+## Using the interface
+
+- **Explorer (left)**: filter files as you type, refresh the directory, and select a source. The list shows names only; size, detected encoding, and modification date appear in the workspace header.
+- **Workspace header**: file identity and metadata, the encoding override, a semantic status pill (`Loading`, `Analyzing`, `Cached`, `Recomputed`, or a stale-cache warning), and **Recompute**.
+- **Source (top)**: the decoded file with a synchronized scrollbar and Range-based selection when you target a result.
+- **Results (bottom)**: tabbed palindromes and levidromes with live counts. The filter box narrows the loaded results instantly, and target buttons cycle through matching occurrences with a `current/total` counter.
+- **Keyboard**: <kbd>←</kbd>/<kbd>→</kbd> switch result tabs, <kbd>/</kbd> focuses the result filter, <kbd>Esc</kbd> clears the focused filter, and the skip link jumps straight to the workspace.
+- **Responsive**: below 860px the explorer stacks above the workspace; below 560px the header, tabs, and filter toolbar reflow for narrow screens.
 
 ### Production build
 

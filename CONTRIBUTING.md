@@ -59,7 +59,11 @@ CI (`.github/workflows/ci.yml`) runs the Node tests, lint, and build on Node 20 
 - [ ] New navigation behavior has tests in `tests/search.test.mjs`.
 - [ ] The cache schema and `analysisVersion`/`cacheVersion` are updated when result shapes change; `SERVER_VERSION` is updated when the API contract changes.
 - [ ] `data/.cache/` and `data/*.log` are not committed.
-- [ ] UI changes maintain the dark glassmorphic aesthetic, keyboard accessibility, and reduced-motion behavior.
+- [ ] UI changes use the design tokens in `client/src/index.css` and the inline SVG icons in `client/src/components/Icons.jsx`; do not introduce emoji icons or external icon/font CDNs.
+- [ ] UI changes keep keyboard access intact: skip link, visible focus rings, roving result tabs, `/` to focus the result filter, and `Esc` to clear a focused filter.
+- [ ] UI changes preserve reduced-motion behavior and the 1080px/860px/560px responsive breakpoints.
+- [ ] The explorer lists file names only; size, encoding, and modification date stay in the workspace header.
+- [ ] Empty, loading, error, and stale-cache states remain explicit and use semantic status tones.
 - [ ] No regression on multi-megabyte file handling, request cancellation, or retry behavior.
 - [ ] Documentation in `README.md`, `CODE_DOCUMENTATION.md`, `DESIGN_PHILOSOPHY.md`, and this file is updated.
 
@@ -67,6 +71,7 @@ CI (`.github/workflows/ci.yml`) runs the Node tests, lint, and build on Node 20 
 
 - Follow `.editorconfig`: UTF-8, LF, final newline, 4-space indentation for JS (2 for JSON/YAML).
 - Run `npm run lint`; the client uses the ESLint 9 flat config in `client/eslint.config.js`.
+- Keep design tokens and base element styles in `client/src/index.css`; keep component and responsive styles in `client/src/App.css`. Reuse the existing tokens and classes instead of adding one-off colors or spacing values.
 - Prettier is not configured yet. Match the surrounding style instead of reformatting unrelated files.
 
 ## Metadata

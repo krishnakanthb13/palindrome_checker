@@ -14,10 +14,12 @@
     favicon.svg           # Application icon
   /src
     main.jsx              # React bootstrap
-    App.jsx               # UI state, request tokens, navigation, tabs, errors
+    App.jsx               # UI state, request tokens, filters, tabs, navigation, errors
     api.js                # Fetch helpers and HTTP error handling
-    App.css               # Layout, responsive rules, accessibility styles
-    index.css             # Base theme, fonts, scrollbars
+    App.css               # Component styles, status tones, responsive breakpoints
+    index.css             # Design tokens, base theme, scrollbars
+    /components
+      Icons.jsx           # Inline SVG icon set (no emoji icons)
     /utils
       palindrome.js       # Compatibility re-export of shared analysis
       levidrome.js        # Compatibility re-export of shared analysis
@@ -62,6 +64,18 @@ The app is a local client-server system:
 - **Request safety**: the client uses a monotonic request token plus `AbortController`; state is committed only after the token check. Starting a new load aborts the previous request.
 - **Error visibility**: non-2xx responses throw `ApiError`, the UI shows an error banner with retry, and a health overlay blocks incompatible or offline servers.
 - **Local by default**: the API binds to `127.0.0.1`, CORS is not enabled, and the browser talks to the API through the same origin (Vite proxy in development, Express static serving in production).
+
+## UI architecture
+
+- **Design tokens** (`client/src/index.css`) define the dark palette, semantic colors (`accent`, `success`, `warning`, `danger`), surfaces, borders, radii, shadows, typography, and the shared transition. `client/src/App.css` contains component and responsive styles. Both files use a local system font stack, so the interface has no external asset dependency.
+- **Iconography** (`client/src/components/Icons.jsx`) is an inline SVG set: logo, file, refresh, target, search, close, alert, check, database, arrow, and server. Icons inherit `currentColor` and `font-size`, scale with their controls, and are hidden from assistive technology. The UI uses no emoji as icons.
+- **Sidebar**: brand header, a client-side file filter, a file-list refresh action, compact keyboard-focusable file buttons, and a footer with the project credit, the API protocol version, and local-only status. The list shows names only; file size, encoding, and modification date live in the workspace header.
+- **Workspace header**: file identity and metadata, the encoding override, a semantic status pill, and the **Recompute** action. `statusTone()` maps the current status to `info`, `success`, or `warning`, so loading, cache hits, recomputation, stale caches, and navigation messages are visually distinct.
+- **Source and results panels**: the source viewer keeps the single `<pre>` text node and synchronized scroll mirror. Results are tabbed and each tab shows its live count. The viewer toolbar filters the in-memory result array without a server request, and the list still pages in 500-row batches.
+- **Client-side filtering**: `fileQuery` filters the file list; `resultQuery` filters palindromes by `word` and levidromes by either pair member. Both lists derive from `useMemo`. The result filter resets when a new file loads. Empty states distinguish “no results in this file” from “no matches for this filter”.
+- **Keyboard and accessibility**: a skip link targets `<main id="main-content">`; file rows are real buttons with `aria-current`; tabs use `role="tablist"`/`role="tab"` with roving `tabIndex` and <kbd>←</kbd>/<kbd>→</kbd> handling; status and loading use live regions; errors use `role="alert"`; the server warning uses `alertdialog`; focus-visible rings and `prefers-reduced-motion` are respected. Pressing <kbd>/</kbd> focuses the result filter unless focus is already in a form control, and <kbd>Esc</kbd> clears the focused filter.
+- **Responsive layout**: the shell is a two-column grid above 1080px, relaxes panel hints below that, becomes a stacked page at 860px, and reflows the header, tabs, and filter toolbar at 560px. The shell uses `100dvh`, and the layouts are checked for horizontal overflow.
+- **Motion**: interactions use short (roughly 140–180ms) color, border, background, and transform transitions. There are no continuous background animations, so visual feedback does not compete with analysis.
 
 ## API
 
@@ -191,6 +205,8 @@ The store validates entries before returning them: version fields, source/encodi
 | `server/lib/cache.js` | `isCacheFresh(data, fingerprint, version)` | Compares source, encoding, SHA-256, and analysis version. |
 | `client/src/api.js` | `requestJson` | Checks `res.ok` and converts HTTP failures into visible `ApiError`s. |
 | `client/src/App.jsx` | `loadFile` | Request-token + abort flow; commits file and result state only if still current. |
+| `client/src/App.jsx` | `statusTone` | Maps status text to semantic pill tones (`info`, `success`, `warning`). |
+| `client/src/components/Icons.jsx` | Icon components | Inline SVG icons that inherit `currentColor` and `font-size`; replaces emoji icons. |
 | `client/src/utils/search.js` | `findOccurrence(content, word, requested)` | Finds the requested case/punctuation-aware token and cycles through occurrences. |
 | `century_dates/generate_dates.py` | `generate_entries(start, end)` | Generates unique `YYMMDD`, `YYYYMMDD`, and timestamp-palindrome lines. |
 
@@ -201,11 +217,12 @@ The store validates entries before returning them: version fields, source/encodi
 3. **File selection**: the client requests the decoded file, then the cache status, with an abortable request token.
 4. **Cache hit**: a fresh cache populates both result tabs immediately.
 5. **Cache miss/stale**: the server computes both analyses and atomically writes the new cache. A stale cache makes the client POST with `force: true`.
-6. **Display**: structured results start with 500 rows and add 500 per “Show more” click, with occurrence counts, empty states, and a status badge.
-7. **Navigate**: clicking 🎯 finds the next matching occurrence, selects it with the Range API, and scrolls it into view. The counter shows `current/total`; repeated clicks cycle.
-8. **Refresh**: re-reads the source and forces a recomputation of both analyses.
-9. **Encoding change**: reloads the source and analysis with the selected override.
-10. **Retry**: the error banner retries the current file; the health overlay retries the connection and file list.
+6. **Display**: structured results populate both tabs with live counts. The viewer starts with 500 rows and adds 500 per “Show more” click, with occurrence counts, filter-aware empty states, and a semantic status pill.
+7. **Filter**: typing in the result filter narrows the already-loaded array instantly (no request); `/` focuses it from anywhere outside a form control, and `Esc` clears it. The file filter works the same way in the sidebar.
+8. **Navigate**: clicking a target button finds the next matching occurrence, selects it with the Range API, and scrolls it into view. The counter shows `current/total`; repeated clicks cycle.
+9. **Refresh**: re-reads the source and forces a recomputation of both analyses.
+10. **Encoding change**: reloads the source and analysis with the selected override.
+11. **Retry**: the error banner retries the current file; the health overlay retries the connection and file list.
 
 ## Encoding
 
